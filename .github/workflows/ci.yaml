@@ -1,25 +1,47 @@
-name: CI Pipeline
+# .github/workflows/repo-events.yml
+name: Repo Events
 on:
   push:
+    branches:
+      - main
+      - 'release/*'
+    paths-ignore:
+      - 'docs/**'
+  pull_request:
+    branches: [ main ]
+    types: [opened, synchronize, reopened, closed]
+  create:        # branch or tag created
+  delete:        # branch or tag deleted
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: dev
+  schedule:
+    - cron: "0 0 * * *"  # daily at 00:00 UTC
 
 jobs:
-  build:
+  build_and_test:
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-
     steps:
-      # Action
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Branch/Ref: ${{ github.ref }}"
+          echo "Manual env: ${{ inputs.environment }}"
+      - run: npm ci && npm test
 
-      # Step (run command)
-      - name: Install dependencies
-        run: npm install
+  housekeeping:
+    if: github.event_name == 'create' || github.event_name == 'delete'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Branch/Tag ${GITHUB_REF} was ${{ github.event_name }}d"
 
-      # Step (using an action)
-      - name: Setup Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 24
-
-      # Step (run tests)
-      - name: Run tests
-        run: npm test
+  nightly:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Nightly job running with cron"
