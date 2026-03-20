@@ -1,47 +1,39 @@
-# .github/workflows/repo-events.yml
-name: Repo Events
+name: CI/CD Pipeline Example
+
 on:
   push:
     branches:
       - main
-      - 'release/*'
-    paths-ignore:
-      - 'docs/**'
   pull_request:
-    branches: [ main ]
-    types: [opened, synchronize, reopened, closed]
-  create:        # branch or tag created
-  delete:        # branch or tag deleted
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Target environment'
-        required: true
-        default: dev
-  schedule:
-    - cron: "0 0 * * *"  # daily at 00:00 UTC
+    branches:
+      - main
 
 jobs:
-  build_and_test:
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
+  build-and-test:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: |
-          echo "Event: ${{ github.event_name }}"
-          echo "Branch/Ref: ${{ github.ref }}"
-          echo "Manual env: ${{ inputs.environment }}"
-      - run: npm ci && npm test
 
-  housekeeping:
-    if: github.event_name == 'create' || github.event_name == 'delete'
-    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: echo "Branch/Tag ${GITHUB_REF} was ${{ github.event_name }}d"
+      - name: Checkout repository
+        # This action checks out your repository under $GITHUB_WORKSPACE
+        uses: actions/checkout@v4
+        [actions/checkout@v4](https://github.com/actions/checkout)
 
-  nightly:
-    if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Nightly job running with cron"
+      - name: Set up Node.js
+        # This action installs the specified Node.js version
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        # Runs a single command using the runners shell
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+
+      - name: Run tests
+        run: npm test
+
+  # You can add further jobs for deployment to different environments (staging, production)
+  # For more advanced examples involving deployment to Kubernetes or AWS, see the
+  # [GitHub Actions documentation](https://docs.github.com/actions).
